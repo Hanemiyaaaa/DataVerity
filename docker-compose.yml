@@ -1,0 +1,108 @@
+services:
+
+  # =========================
+  # POSTGRES
+  # =========================
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: app_password
+      POSTGRES_DB: app_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+  # =========================
+  # REDIS
+  # =========================
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - app_network
+
+  # =========================
+  # BACKEND (FastAPI)
+  # =========================
+  backend:
+    build: ./backend
+    container_name: backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://app_user:app_password@postgres:5432/app_db
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - app_network
+
+  # =========================
+  # FRONTEND (React)
+  # =========================
+  frontend:
+    image: node:20-alpine
+    container_name: frontend
+    command: tail -f /dev/null # просто держим контейнер запущенным
+    ports:
+      - "3000:3000"
+    networks:
+      - app_network
+
+  # =========================
+  # AIRFLOW
+  # =========================
+  airflow:
+    image: apache/airflow:2.8.1
+    container_name: airflow
+    command: standalone
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://app_user:app_password@postgres:5432/app_db
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - app_network
+
+  # =========================
+  # SPARK MASTER
+  # =========================
+  spark-master:
+    image: apache/spark:3.5.1
+    container_name: spark-master
+    command: bash -c "/opt/spark/sbin/start-master.sh && tail -f /dev/null"
+    ports:
+      - "7077:7077" # порт для воркеров
+      - "8081:8080" # веб-интерфейс Spark
+    networks:
+      - app_network
+
+  # =========================
+  # SPARK WORKER
+  # =========================
+  spark-worker:
+    image: apache/spark:3.5.1
+    container_name: spark-worker
+    command: bash -c "/opt/spark/sbin/start-worker.sh spark://spark-master:7077 && tail -f /dev/null"
+    depends_on:
+      - spark-master
+    networks:
+      - app_network
+
+volumes:
+  postgres_data:
+
+
+networks:
+  app_network:
+    driver: bridge
