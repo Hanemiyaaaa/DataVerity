@@ -5,6 +5,7 @@ __pycache__/
 *.pyd
 .venv/
 venv/
+env/
 
 # Node
 node_modules/
@@ -26,3 +27,7 @@ Thumbs.db
 
 # Airflow
 airflow/logs/
+
+# Alembic cache
+alembic/__pycache__/
+backend/alembic.ini
