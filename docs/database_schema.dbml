@@ -1,0 +1,144 @@
+// Dataverity Database Schema
+// DBML format
+
+Table users {
+  id integer [primary key]
+  email varchar [unique, not null]
+  password_hash varchar [not null]
+  created_at timestamp
+}
+
+Table roles {
+  id integer [primary key]
+  name varchar [unique]
+}
+
+Table user_roles {
+  user_id integer
+  role_id integer
+}
+
+Table data_sources {
+  id integer [primary key]
+  name varchar
+  type varchar
+  connection_config text
+  created_at timestamp
+}
+
+Table datasets {
+  id integer [primary key]
+  name varchar
+  description text
+  source_id integer
+  created_at timestamp
+}
+
+Table dataset_versions {
+  id integer [primary key]
+  dataset_id integer
+  version varchar
+  business_date date
+  created_at timestamp
+}
+
+Table pipeline_runs {
+  id integer [primary key]
+  dataset_version_id integer
+  status varchar
+  started_at timestamp
+  finished_at timestamp
+}
+
+Table rules {
+  id integer [primary key]
+  dataset_id integer
+  name varchar
+  rule_type varchar
+  config json
+  created_at timestamp
+}
+
+Table rule_results {
+  id integer [primary key]
+  pipeline_run_id integer
+  rule_id integer
+  violations_count integer
+  status varchar
+}
+
+Table data_quality_metrics {
+  id integer [primary key]
+  pipeline_run_id integer
+
+  duplicate_rate float
+  null_ratio float
+  schema_errors integer
+  range_violations integer
+
+  data_quality_score float
+}
+
+Ref user_role_user: user_roles.user_id > users.id
+Ref user_role_role: user_roles.role_id > roles.id
+
+Ref dataset_source: datasets.source_id > data_sources.id
+
+Ref dataset_version_dataset: dataset_versions.dataset_id > datasets.id
+
+Ref pipeline_dataset_version: pipeline_runs.dataset_version_id > dataset_versions.id
+
+Ref rule_dataset: rules.dataset_id > datasets.id
+
+Ref rule_result_run: rule_results.pipeline_run_id > pipeline_runs.id
+Ref rule_result_rule: rule_results.rule_id > rules.id
+
+Ref metrics_pipeline_run: data_quality_metrics.pipeline_run_id > pipeline_runs.id
+
+
+Records users(id, email) {
+  1, "admin@dataverity.com"
+  2, "analyst@dataverity.com"
+}
+
+Records roles(id, name) {
+  1, "admin"
+  2, "data_engineer"
+}
+
+Records user_roles(user_id, role_id) {
+  1, 1
+  2, 2
+}
+
+Records data_sources(id, name, type) {
+  1, "Bank Database", "postgres"
+  2, "CSV Upload", "file"
+}
+
+Records datasets(id, name, source_id) {
+  1, "credit_portfolio", 1
+  2, "bank_balance_sheet", 1
+}
+
+Records dataset_versions(id, dataset_id, version, business_date) {
+  1, 1, "v1", "2026-03-10"
+}
+
+Records pipeline_runs(id, dataset_version_id, status) {
+  1, 1, "completed"
+}
+
+Records rules(id, dataset_id, name, rule_type) {
+  1, 1, "no_duplicates", "duplicate_check"
+  2, 1, "null_check", "null_validation"
+}
+
+Records rule_results(id, pipeline_run_id, rule_id, violations_count) {
+  1, 1, 1, 0
+  2, 1, 2, 3
+}
+
+Records data_quality_metrics(id, pipeline_run_id, duplicate_rate, null_ratio, data_quality_score) {
+  1, 1, 0.0, 0.02, 94.5
+}
